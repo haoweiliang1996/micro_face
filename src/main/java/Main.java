@@ -2,6 +2,7 @@
 // and the org.json library (org.json:json:20170516).
 
 import com.alibaba.fastjson.JSONObject;
+import com.github.sarxos.webcam.Webcam;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -14,6 +15,8 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
+import javax.imageio.ImageIO;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -32,7 +35,6 @@ public class Main {
     public static void getFaceName(List<String> faceIds) {
         final String uriBase = "https://api.cognitive.azure.cn/face/v1.0/identify";
         try {
-
             URIBuilder builder = new URIBuilder(uriBase);
 
             Map<String, Object> map = new HashMap<>();
@@ -65,6 +67,20 @@ public class Main {
 
     }
 
+    private static byte[] getImgFromWebCam() {
+        Webcam webcam = Webcam.getDefault();
+        webcam.open();
+        try {
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            ImageIO.write(webcam.getImage(), "PNG", byteArrayOutputStream);
+            return byteArrayOutputStream.toByteArray();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //System.out.println(res.length);
+        return null;
+    }
+
     public static String getNameById(String personId) {
         final String url = String.format("https://api.cognitive.azure.cn/face/v1.0/persongroups/%s/persons/%s", personGroupId, personId);
         try {
@@ -87,56 +103,54 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        HttpClient httpclient = new DefaultHttpClient();
-        for(int i =0;i<10;i++)
-        try {
-            long startTime = System.currentTimeMillis();   //获取开始时间
-            URIBuilder builder = new URIBuilder(uriBase);
-            builder.setParameter("returnFaceId", "true");
-            builder.setParameter("returnFaceLandmarks", "false");
-            builder.setParameter("returnFaceAttributes", "");
+        HttpClient httpclient = HttpClients.createDefault();
+        for (int i = 0; i < 10; i++)
+            try {
+                long startTime = System.currentTimeMillis();   //获取开始时间
+                URIBuilder builder = new URIBuilder(uriBase);
+                builder.setParameter("returnFaceId", "true");
+                builder.setParameter("returnFaceLandmarks", "false");
+                builder.setParameter("returnFaceAttributes", "");
 
-            // Prepare the URI for the REST API call.
-            URI uri = builder.build();
-            HttpPost request = new HttpPost(uri);
+                // Prepare the URI for the REST API call.
+                URI uri = builder.build();
+                HttpPost request = new HttpPost(uri);
 
-            // Request headers.
-            request.setHeader("Content-Type", "application/octet-stream");
-            //request.setHeader("Content-Type", "application/json");
-            request.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+                // Request headers.
+                request.setHeader("Content-Type", "application/octet-stream");
+                //request.setHeader("Content-Type", "application/json");
+                request.setHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
 
-            File file;
-            if (i%2 ==0)
-                file = new File("dad.png");
-            else
-                file = new File("family.png");
-            byte[] picBytes = Files.readAllBytes(file.toPath());
+                File file;
+                if (i % 2 == 0)
+                    file = new File("dad.png");
+                else
+                    file = new File("family.png");
+                byte[] picBytes = Files.readAllBytes(file.toPath());
+                picBytes = getImgFromWebCam();
 
-            // Request body.
-            ByteArrayEntity byteArrayEntity = new ByteArrayEntity(picBytes);
-            request.setEntity(byteArrayEntity);
+                // Request body.
+                ByteArrayEntity byteArrayEntity = new ByteArrayEntity(picBytes);
+                request.setEntity(byteArrayEntity);
 
+                HttpResponse response = httpclient.execute(request);
+                long endTime = System.currentTimeMillis(); //获取结束时间
+                System.out.println("程序运行时间： " + (endTime - startTime) + "ms");
+                HttpEntity entity = response.getEntity();
 
-            // Execute the REST API call and get the response entity.
-            HttpResponse response = httpclient.execute(request);
-            long endTime = System.currentTimeMillis(); //获取结束时间
-            System.out.println("程序运行时间： " + (endTime - startTime) + "ms");
-            HttpEntity entity = response.getEntity();
-
-            if (entity != null) {
-                String jsonString = EntityUtils.toString(entity).trim();
-                System.out.println(jsonString);
-                List<String> res = JSONObject.parseArray(jsonString).stream()
-                        .map(object -> (JSONObject) object)
-                        .map(jsonObject -> jsonObject.getString("faceId"))
-                        .collect(Collectors.toList());
-                getFaceName(res);
-                long endTime2 = System.currentTimeMillis(); //获取结束时间
-                System.out.println("程序运行时间： " + (endTime2 - endTime) + "ms");
+                if (entity != null) {
+                    String jsonString = EntityUtils.toString(entity).trim();
+                    System.out.println(jsonString);
+                    List<String> res = JSONObject.parseArray(jsonString).stream()
+                            .map(object -> (JSONObject) object)
+                            .map(jsonObject -> jsonObject.getString("faceId"))
+                            .collect(Collectors.toList());
+                    getFaceName(res);
+                    long endTime2 = System.currentTimeMillis(); //获取结束时间
+                    System.out.println("程序运行时间： " + (endTime2 - endTime) + "ms");
+                }
+            } catch (Exception e) {
+                System.out.println("error" + e.getMessage());
             }
-        } catch (Exception e) {
-            // Display error message.
-            System.out.println("error" + e.getMessage());
-        }
     }
 }
