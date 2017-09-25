@@ -70,7 +70,7 @@ public class Main {
         webcam.open();
         try {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            ImageIO.write(webcam.getImage(), "PNG", byteArrayOutputStream);
+            ImageIO.write(webcam.getImage(), "jpeg", byteArrayOutputStream);
             return byteArrayOutputStream.toByteArray();
         } catch (IOException e) {
             e.printStackTrace();
@@ -134,6 +134,7 @@ public class Main {
                         .map(object -> (JSONObject) object)
                         .map(jsonObject -> jsonObject.getString("faceId"))
                         .collect(Collectors.toList());
+
                 String nameRes = getFaceName(res);
                 long endTime2 = System.currentTimeMillis(); //获取结束时间
                 System.out.println("程序运行时间： " + (endTime2 - endTime) + "ms");
@@ -143,6 +144,9 @@ public class Main {
             System.out.println("error" + e.getMessage());
         }
         return null;
+    }
+    public static Boolean faceDetect(){
+        return
     }
 
     public static void main(String[] args) {
